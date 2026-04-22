@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using PlanktonTests;
 
 namespace Plankton.Test
 {
@@ -10,13 +11,13 @@ namespace Plankton.Test
         [Test]
         public void CanSplitFace()
         {
-            PlanktonMesh pMesh = new PlanktonMesh();
-            
+            var pMesh = IdentityFactory.CreateMesh();
+
             // Create one vertex for each corner of a square
-            pMesh.Vertices.Add(0, 0, 0); // 0
-            pMesh.Vertices.Add(1, 0, 0); // 1
-            pMesh.Vertices.Add(1, 1, 0); // 2
-            pMesh.Vertices.Add(0, 1, 0); // 3
+            pMesh.Vertices.NewVertex(); // 0
+            pMesh.Vertices.NewVertex(); // 1
+            pMesh.Vertices.NewVertex(); // 2
+            pMesh.Vertices.NewVertex(); // 3
             
             // Create one quadrangular face
             pMesh.Faces.AddFace(0, 1, 2, 3);
@@ -25,63 +26,57 @@ namespace Plankton.Test
             int new_he = pMesh.Faces.SplitFace(0, 4);
 
             // Returned halfedge should be adjacent to old face (#0)
-            Assert.AreEqual(0, pMesh.Halfedges[new_he].AdjacentFace);
+            Assert.That(pMesh.Halfedges[new_he].AdjacentFace, Is.EqualTo(0));
 
             // Traverse from returned halfedge to new face
             int new_he_pair = pMesh.Halfedges.GetPairHalfedge(new_he);
             int new_face = pMesh.Halfedges[new_he_pair].AdjacentFace;
             
-            Assert.AreEqual(1, new_face);
+            Assert.That(new_face, Is.EqualTo(1));
             
             // Check that both faces are now triangular
-            Assert.AreEqual(3, pMesh.Faces.GetFaceVertices(0).Length);
-            Assert.AreEqual(3, pMesh.Faces.GetFaceVertices(1).Length);
-            
+            Assert.That(pMesh.Faces.GetFaceVertices(0).Length, Is.EqualTo(3));
+            Assert.That(pMesh.Faces.GetFaceVertices(1).Length, Is.EqualTo(3));
+
             // Check the halfedges of each face
-            Assert.AreEqual(new int[] { 8, 0, 2 }, pMesh.Faces.GetHalfedges(0));
-            Assert.AreEqual(new int[] { 9, 4, 6 }, pMesh.Faces.GetHalfedges(1));
+            Assert.That(pMesh.Faces.GetHalfedges(0), Is.EqualTo(new int[] { 8, 0, 2 }));
+            Assert.That(pMesh.Faces.GetHalfedges(1), Is.EqualTo(new int[] { 9, 4, 6 }));
         }
 
         [Test]
         public void CannotSplitFaceBadArguments()
         {
-            PlanktonMesh pMesh = new PlanktonMesh();
+            var pMesh = IdentityFactory.CreateMesh();
 
             // Create one vertex for each corner of a square
-            pMesh.Vertices.Add(0, 0, 0); // 0
-            pMesh.Vertices.Add(1, 0, 0); // 1
-            pMesh.Vertices.Add(1, 1, 0); // 2
-            pMesh.Vertices.Add(0, 1, 0); // 3
+            pMesh.Vertices.NewVertex(); // 0
+            pMesh.Vertices.NewVertex(); // 1
+            pMesh.Vertices.NewVertex(); // 2
+            pMesh.Vertices.NewVertex(); // 3
 
             // Create one quadrangular face
             pMesh.Faces.AddFace(0, 1, 2, 3);
 
-            // First halfedge is a boundary
-            Assert.AreEqual(-1, pMesh.Faces.SplitFace(1, 4));
-
-            // Second halfedge is a boundary
-            Assert.AreEqual(-1, pMesh.Faces.SplitFace(4, 1));
-
-            // Same halfedge used for both arguments
-            Assert.AreEqual(-1, pMesh.Faces.SplitFace(0, 0));
-
-            // Second halfedge is successor to first
-            Assert.AreEqual(-1, pMesh.Faces.SplitFace(0, 2));
-
-            // Second halfedge is predecessor to first
-            Assert.AreEqual(-1, pMesh.Faces.SplitFace(0, 6));
+            
+            Assert.That(-1,
+                Is.EqualTo(pMesh.Faces.SplitFace(1, 4)), // First halfedge is a boundary
+                Is.EqualTo(pMesh.Faces.SplitFace(4, 1)), // Second halfedge is a boundary
+                Is.EqualTo(pMesh.Faces.SplitFace(0, 0)), // Same halfedge used for both arguments
+                Is.EqualTo(pMesh.Faces.SplitFace(0, 2)), // Second halfedge is successor to first
+                Is.EqualTo(pMesh.Faces.SplitFace(0, 6))  // Second halfedge is predecessor to first
+            );
         }
 
         [Test]
         public void CanMergeFaces()
         {
-            PlanktonMesh pMesh = new PlanktonMesh();
+            var pMesh = IdentityFactory.CreateMesh();
 
             // Create one vertex for each corner of a square
-            pMesh.Vertices.Add(0, 0, 0); // 0
-            pMesh.Vertices.Add(1, 0, 0); // 1
-            pMesh.Vertices.Add(1, 1, 0); // 2
-            pMesh.Vertices.Add(0, 1, 0); // 3
+            pMesh.Vertices.NewVertex(); // 0
+            pMesh.Vertices.NewVertex(); // 1
+            pMesh.Vertices.NewVertex(); // 2
+            pMesh.Vertices.NewVertex(); // 3
 
             // Create two triangular faces
             pMesh.Faces.AddFace(0, 1, 2);

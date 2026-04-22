@@ -1,12 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<AssemblyName>PlanktonTests</AssemblyName>
 		<RootNamespace>PlanktonTests</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="NUnit" Version="4.5.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Plankton\Plankton.csproj" />
 	</ItemGroup>
 </Project>
