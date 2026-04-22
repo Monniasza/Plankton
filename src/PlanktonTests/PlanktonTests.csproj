@@ -5,4 +5,8 @@
 		<AssemblyName>PlanktonTests</AssemblyName>
 		<RootNamespace>PlanktonTests</RootNamespace>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="NUnit" Version="4.5.1" />
+	</ItemGroup>
 </Project>
