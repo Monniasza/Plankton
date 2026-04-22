@@ -299,9 +299,13 @@ namespace Plankton
                   _mesh.Vertices[heObj.StartVertex].OutgoingHalfedge = h;
                 }
             }
-            this[index] = new PlanktonFace<TFace>(ident);
+            Kill(index);
         }
-        
+
+        internal void Kill(int index) {
+            _mesh.Identity.OnRemoveFace(this[index]);
+        }
+
         /// <summary>
         /// Returns the <see cref="PlanktonFace"/> at the given index.
         /// </summary>
@@ -440,7 +444,7 @@ namespace Plankton
 
             // add a new face
             //PlanktonFace new_face = new PlanktonFace();
-            int new_face_index = this.Add(PlanktonFace<TFace>.Unset);
+            int new_face_index = this.Add(NewFace());
 
             //link everything up
 
@@ -470,6 +474,10 @@ namespace Plankton
             //think thats all of it!           
 
             return new_halfedge1;
+        }
+
+        private PlanktonFace<TFace> NewFace() {
+            return new PlanktonFace<TFace>(-1, _mesh.Identity.NewFaceIdentity);
         }
 
         /// <summary>
@@ -514,7 +522,7 @@ namespace Plankton
             }
 
             // Keep the adjacent face, but remove the pair's adjacent face
-            this[pair_face] = PlanktonFace.Unset;
+            Kill(pair_face);
 
             return index_next;
         }
@@ -526,7 +534,7 @@ namespace Plankton
         /// <returns>The index of the central vertex</returns>
         public int Stellate(int f)
         {
-            int central_vertex = _mesh.Vertices.Add(this.GetFaceCenter(f)); //TODO make generic
+            int central_vertex = _mesh.Vertices.NewVertex().Index; //TODO make generic
             int CountBefore = _mesh.Halfedges.Count();
             int[] FaceHalfEdges = this.GetHalfedges(f);
             for (int i = 0; i < FaceHalfEdges.Length; i++)
@@ -534,7 +542,7 @@ namespace Plankton
                 int ThisHalfEdge = FaceHalfEdges[i];
                 int TriangleFace;
                 if (i == 0) {TriangleFace = f;}
-                else {TriangleFace = this.Add(PlanktonFace.Unset);}                
+                else {TriangleFace = this.Add(NewFace());}                
                 this[TriangleFace].FirstHalfedge = ThisHalfEdge;
                 _mesh.Halfedges[ThisHalfEdge].AdjacentFace = TriangleFace;
                 int OutSpoke = _mesh.Halfedges.AddPair(central_vertex, _mesh.Halfedges[ThisHalfEdge].StartVertex, TriangleFace);
@@ -584,9 +592,9 @@ namespace Plankton
         /// Gets an enumerator that yields all faces in this collection.
         /// </summary>
         /// <returns>An enumerator.</returns>
-        public IEnumerator<PlanktonFace> GetEnumerator()
+        public IEnumerator<PlanktonFace<TFace>> GetEnumerator()
         {
-            return this._list.GetEnumerator();
+            return this._list.Where(x => x != null).GetEnumerator();
         }
         IEnumerator IEnumerable.GetEnumerator()
         {

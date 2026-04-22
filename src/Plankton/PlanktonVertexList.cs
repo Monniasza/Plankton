@@ -402,7 +402,7 @@ namespace Plankton
             _mesh.Halfedges.RemovePairHelper(vertexHalfedges[0]);
             for (int i = 1; i < vertexHalfedges.Length; i++)
             {
-                _mesh.Faces[_mesh.Halfedges[vertexHalfedges[i]].AdjacentFace] = null;
+                _mesh.Faces.Kill(_mesh.Halfedges[vertexHalfedges[i]].AdjacentFace);
                 _mesh.Halfedges.RemovePairHelper(vertexHalfedges[i]);
             }
 
@@ -413,7 +413,7 @@ namespace Plankton
             }
 
             // Mark center vertex for deletion
-            this[vertexIndex] = new PlanktonVertex<TVertex>(default);
+            Kill(vertexIndex);
 
             return _mesh.Faces[faceIndex].FirstHalfedge;
         }
@@ -458,6 +458,10 @@ namespace Plankton
         IEnumerator IEnumerable.GetEnumerator()
         {
             return this.GetEnumerator();
+        }
+
+        internal void Kill(int v_kill) {
+            _mesh.Identity.OnRemoveVertex(this[v_kill]);
         }
         #endregion
     }

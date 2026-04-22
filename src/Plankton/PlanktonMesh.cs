@@ -18,14 +18,17 @@ namespace Plankton
         /// <summary>
         /// Initializes a new (empty) instance of the <see cref="PlanktonMesh"/> class.
         /// </summary>
-        public PlanktonMesh()
+        public PlanktonMesh(IMeshIdentityProvider<TVertex, TEdge, TFace> identity)
         {
+            ArgumentNullException.ThrowIfNull(identity, nameof(identity));
+            this.Identity = identity;
         }
 
         /// <summary>
         /// Initializes a new (duplicate) instance of the <see cref="PlanktonMesh"/> class.
         /// </summary>
-        public PlanktonMesh(PlanktonMesh<TVertex, TEdge, TFace> source)
+        public PlanktonMesh(PlanktonMesh<TVertex, TEdge, TFace> source, IMeshIdentityProvider<TVertex, TFace, TEdge> identity)
+        :this(identity)
         {
             foreach (var v in source.Vertices)
             {

@@ -56,12 +56,12 @@ namespace Plankton
         /// <param name="end">A vertex index (from which the second halfedge originates).</param>
         /// <param name="face">A face index (adjacent to the first halfedge).</param>
         /// <returns>The index of the first halfedge in the pair.</returns>
-        internal int AddPair(int start, int end, int face, TEdge data)
+        internal int AddPair(int start, int end, int face)
         {
             // he->next = he->pair
             int i = this.Count;
-            this.Add(new PlanktonHalfedge<TEdge>(start, face, i + 1, data));
-            this.Add(new PlanktonHalfedge<TEdge>(end, -1, i, data));
+            this.Add(new PlanktonHalfedge<TEdge>(start, face, i + 1, _mesh.Identity.NewEdgeIdentity));
+            this.Add(new PlanktonHalfedge<TEdge>(end, -1, i, _mesh.Identity.NewEdgeIdentity));
             return i;
         }
 
@@ -95,8 +95,7 @@ namespace Plankton
             }
 
             // Mark halfedges for deletion
-            this[index] = new PlanktonHalfedge<TEdge>(default);
-            this[pair] = new PlanktonHalfedge<TEdge>(default);
+            Kill(index); Kill(pair);
         }
 
         /// <summary>
@@ -368,7 +367,7 @@ namespace Plankton
 
             // Create a copy of the existing vertex (user can move it afterwards if needs be)
             int end_vertex = this[pair].StartVertex;
-            int new_vertex_index = _mesh.Vertices.Add(_mesh.Vertices[end_vertex].Data); // use XYZ to copy            
+            int new_vertex_index = _mesh.Vertices.NewVertex().Index; // use XYZ to copy            
 
             // Add a new halfedge pair
             int new_halfedge1 = this.AddPair(new_vertex_index, this.EndVertex(index), this[index].AdjacentFace);
@@ -394,28 +393,6 @@ namespace Plankton
             }
 
             return new_halfedge1;
-        }
-
-        /// <summary>
-        /// Split 2 adjacent triangles into 4 by inserting a new vertex along the edge
-        /// </summary>
-        /// <param name="index">The index of the halfedge to split. Must be between 2 triangles.</param>        
-        /// <returns>The index of the halfedge going from the new vertex to the end of the input halfedge, or -1 on failure</returns>
-        public int TriangleSplitEdge(int index)
-        {
-            //split the edge
-            // (I guess we could include a parameter for where along the edge to split)
-            int new_halfedge = this.SplitEdge(index);
-            int point_on_edge = this[new_halfedge].StartVertex;
-             
-            _mesh.Vertices[point_on_edge].X = 0.5F * (_mesh.Vertices[this[index].StartVertex].X + _mesh.Vertices[this.EndVertex(new_halfedge)].X);
-            _mesh.Vertices[point_on_edge].Y = 0.5F * (_mesh.Vertices[this[index].StartVertex].Y + _mesh.Vertices[this.EndVertex(new_halfedge)].Y);
-            _mesh.Vertices[point_on_edge].Z = 0.5F * (_mesh.Vertices[this[index].StartVertex].Z + _mesh.Vertices[this.EndVertex(new_halfedge)].Z);
-
-            int new_face1 = _mesh.Faces.SplitFace(new_halfedge, this[this[new_halfedge].NextHalfedge].NextHalfedge);
-            int new_face2 = _mesh.Faces.SplitFace(this.GetPairHalfedge(index), this[this[this.GetPairHalfedge(index)].NextHalfedge].NextHalfedge);
-
-            return new_halfedge;
         }
 
         /// <summary>
@@ -484,9 +461,8 @@ namespace Plankton
             this.MakeConsecutive(pair_prev, this[pair].NextHalfedge);
 
             // Kill the halfedge pair and its end vertex
-            this[index] = PlanktonHalfedge.Unset;
-            this[pair] = PlanktonHalfedge.Unset;
-            _mesh.Vertices[v_kill] = PlanktonVertex.Unset;
+            Kill(index); Kill(pair);
+            _mesh.Vertices.Kill(v_kill);
 
             // Update faces' first halfedges, if necessary
             if (f != -1 && fs[f].FirstHalfedge == index)
@@ -507,17 +483,21 @@ namespace Plankton
 
             return h_rtn;
         }
+
+        internal void Kill(int index) {
+            _mesh.Identity.OnRemoveEdge(this[index]);
+        }
         #endregion
         #endregion
-        
+
         #region IEnumerable implementation
         /// <summary>
         /// Gets an enumerator that yields all halfedges in this collection.
         /// </summary>
         /// <returns>An enumerator.</returns>
-        public IEnumerator<PlanktonHalfedge> GetEnumerator()
+        public IEnumerator<PlanktonHalfedge<TEdge>> GetEnumerator()
         {
-            return this._list.GetEnumerator();
+            return this._list.Where(x => x != null).GetEnumerator();
         }
         IEnumerator IEnumerable.GetEnumerator()
         {
