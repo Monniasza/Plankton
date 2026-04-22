@@ -5,34 +5,20 @@ namespace Plankton
     /// <summary>
     /// Represents a face in Plankton's halfedge mesh data structure.
     /// </summary>
-    public class PlanktonFace
+    public class PlanktonFace<TFace>
     {
         public int FirstHalfedge;
+        public readonly TFace Identity;
         
-        public PlanktonFace()
-        {
-            this.FirstHalfedge = -1;
-        }
-        
-        internal PlanktonFace(int halfedgeIndex)
+        internal PlanktonFace(int halfedgeIndex, Func<PlanktonFace<TFace>, TFace> ident)
         {
             this.FirstHalfedge = halfedgeIndex;
-        }
-        
-        /// <summary>
-        /// Gets an unset PlanktonFace. Unset faces have -1 for their first halfedge index.
-        /// </summary>
-        public static PlanktonFace Unset
-        {
-            get { return new PlanktonFace() { FirstHalfedge = -1 }; }
+            this.Identity = ident(this);
         }
         
         /// <summary>
         /// Whether or not the face is currently being referenced in the mesh.
         /// </summary>
         public bool IsUnused { get { return (this.FirstHalfedge < 0); } }
-        
-        [Obsolete()]
-        public bool Dead { get { return this.IsUnused; } }
     }
 }

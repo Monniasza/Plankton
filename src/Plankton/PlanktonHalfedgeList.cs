@@ -8,19 +8,19 @@ namespace Plankton
     /// <summary>
     /// Provides access to the halfedges and <see cref="PlanktonHalfedge"/> related functionality of a Mesh.
     /// </summary>
-    public class PlanktonHalfEdgeList : IEnumerable<PlanktonHalfedge>
+    public class PlanktonHalfEdgeList<TVertex, TEdge, TFace> : IEnumerable<PlanktonHalfedge<TEdge>>
     {
-        private readonly PlanktonMesh _mesh;
-        private List<PlanktonHalfedge> _list;
+        private readonly PlanktonMesh<TVertex, TEdge, TFace> _mesh;
+        private List<PlanktonHalfedge<TEdge>> _list;
         
         /// <summary>
         /// Initializes a new instance of the <see cref="PlanktonHalfedgeList"/> class.
         /// Should be called from the mesh constructor.
         /// </summary>
         /// <param name="owner">The <see cref="PlanktonMesh"/> to which this list of halfedges belongs.</param>
-        internal PlanktonHalfEdgeList(PlanktonMesh owner)
+        internal PlanktonHalfEdgeList(PlanktonMesh<TVertex, TEdge, TFace> owner)
         {
-            this._list = new List<PlanktonHalfedge>();
+            this._list = new List<PlanktonHalfedge<TEdge>>();
             this._mesh = owner;
         }
         
@@ -42,7 +42,7 @@ namespace Plankton
         /// </summary>
         /// <param name="halfEdge">Halfedge to add.</param>
         /// <returns>The index of the newly added halfedge.</returns>
-        public int Add(PlanktonHalfedge halfedge)
+        public int Add(PlanktonHalfedge<TEdge> halfedge)
         {
             if (halfedge == null) return -1;
             this._list.Add(halfedge);
@@ -56,12 +56,12 @@ namespace Plankton
         /// <param name="end">A vertex index (from which the second halfedge originates).</param>
         /// <param name="face">A face index (adjacent to the first halfedge).</param>
         /// <returns>The index of the first halfedge in the pair.</returns>
-        internal int AddPair(int start, int end, int face)
+        internal int AddPair(int start, int end, int face, TEdge data)
         {
             // he->next = he->pair
             int i = this.Count;
-            this.Add(new PlanktonHalfedge(start, face, i + 1));
-            this.Add(new PlanktonHalfedge(end, -1, i));
+            this.Add(new PlanktonHalfedge<TEdge>(start, face, i + 1, data));
+            this.Add(new PlanktonHalfedge<TEdge>(end, -1, i, data));
             return i;
         }
 
@@ -93,10 +93,10 @@ namespace Plankton
                 if (this[index].NextHalfedge == pair) { v2.OutgoingHalfedge = -1; }
                 else { v2.OutgoingHalfedge = this[index].NextHalfedge; }
             }
-            
+
             // Mark halfedges for deletion
-            this[index] = PlanktonHalfedge.Unset;
-            this[pair] = PlanktonHalfedge.Unset;
+            this[index] = new PlanktonHalfedge<TEdge>(default);
+            this[pair] = new PlanktonHalfedge<TEdge>(default);
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace Plankton
         /// Must be larger than or equal to zero and smaller than the Halfedge Count of the mesh.
         /// </param>
         /// <returns>The halfedge at the given index.</returns>
-        public PlanktonHalfedge this[int index]
+        public PlanktonHalfedge<TEdge> this[int index]
         {
             get
             {
@@ -253,12 +253,6 @@ namespace Plankton
             return halfedgeIndex % 2 == 0 ? halfedgeIndex + 1 : halfedgeIndex - 1;
         }
 
-        [Obsolete("PairHalfedge is deprecated, pease use GetPairHalfedge instead.")]
-        public int PairHalfedge(int halfedgeIndex)
-        {
-            return this.GetPairHalfedge(halfedgeIndex);
-        }
-
         /// <summary>
         /// Gets the two vertices for a halfedge.
         /// </summary>
@@ -272,24 +266,6 @@ namespace Plankton
             J = this[this.GetPairHalfedge(index)].StartVertex;
 
             return new int[]{ I, J };
-        }
-
-        /// <summary>
-        /// Gets the halfedge a given number of 'next's around a face from a starting halfedge
-        /// </summary>        
-        /// <param name="startHalfEdge">The halfedge to start from</param>
-        /// <param name="around">How many steps around the face. 0 returns the start_he</param>
-        /// <returns>The resulting halfedge</returns>
-        [Obsolete("GetNextHalfedge(int,int) is deprecated, please use" +
-            "GetFaceCirculator(int).ElementAt(int) instead (LINQ).")]
-        public int GetNextHalfEdge(int startHalfEdge,  int around)
-        {
-            int he_around = startHalfEdge;
-            for (int i = 0; i < around; i++)
-            {
-                he_around = this[he_around].NextHalfedge;
-            }
-            return he_around;
         }
 
         /// <summary>
@@ -323,41 +299,6 @@ namespace Plankton
             this[prev].NextHalfedge = next;
             this[next].PrevHalfedge = prev;
         }
-        #endregion
-
-        #region Geometry
-        public double[] GetLengths()
-        /// <summary>
-        /// Measure the lengths of all the halfedges
-        /// </summary>       
-        /// <returns>An array of lengths for all halfedges, or -1 for dead ones</returns>
-        {
-            double[] Lengths = new double[this.Count];
-            for (int i = 0; i < this.Count; i += 2)
-            {
-                double EdgeLength = GetLength(i);
-                Lengths[i] = EdgeLength;
-                Lengths[i + 1] = EdgeLength;
-            }
-            return Lengths;
-        }
-
-        public double GetLength(int index)
-        /// <summary>
-        /// Measure the length of a single halfedge
-        /// </summary>       
-        /// <returns>The length of the halfedge, or -1 if unused</returns>
-        {
-            double EdgeLength = -1;
-            if (this[index].IsUnused == false)
-            {
-                PlanktonXYZ Start = _mesh.Vertices[this[index].StartVertex].ToXYZ();              
-                PlanktonXYZ End = _mesh.Vertices[this.EndVertex(index)].ToXYZ();
-                EdgeLength = (End - Start).Length;
-            }
-            return EdgeLength;
-        }
-
         #endregion
 
         #region Euler operators
@@ -427,7 +368,7 @@ namespace Plankton
 
             // Create a copy of the existing vertex (user can move it afterwards if needs be)
             int end_vertex = this[pair].StartVertex;
-            int new_vertex_index = _mesh.Vertices.Add(_mesh.Vertices[end_vertex].ToXYZ()); // use XYZ to copy            
+            int new_vertex_index = _mesh.Vertices.Add(_mesh.Vertices[end_vertex].Data); // use XYZ to copy            
 
             // Add a new halfedge pair
             int new_halfedge1 = this.AddPair(new_vertex_index, this.EndVertex(index), this[index].AdjacentFace);

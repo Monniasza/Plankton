@@ -8,19 +8,19 @@ namespace Plankton
     /// <summary>
     /// Provides access to the vertices and <see cref="PlanktonVertex"/> related functionality of a Mesh.
     /// </summary>
-    public class PlanktonVertexList : IEnumerable<PlanktonVertex>
+    public class PlanktonVertexList<TVertex, TEdge, TFace> : IEnumerable<PlanktonVertex<TVertex>>
     {
-        private readonly PlanktonMesh _mesh;
-        private List<PlanktonVertex> _list;
+        private readonly PlanktonMesh<TVertex, TEdge, TFace> _mesh;
+        private List<PlanktonVertex<TVertex>?> _list;
         
         /// <summary>
         /// Initializes a new instance of the <see cref="PlanktonVertexList"/> class.
         /// Should be called from the mesh constructor.
         /// </summary>
         /// <param name="owner">The <see cref="PlanktonMesh"/> to which this list of vertices belongs.</param>
-        internal PlanktonVertexList(PlanktonMesh owner)
+        internal PlanktonVertexList(PlanktonMesh<TVertex, TEdge, TFace> owner)
         {
-            this._list = new List<PlanktonVertex>();
+            this._list = new List<PlanktonVertex<TVertex>>();
             this._mesh = owner;
         }
         
@@ -43,7 +43,7 @@ namespace Plankton
         /// </summary>
         /// <param name="vertex">Vertex to add.</param>
         /// <returns>The index of the newly added vertex.</returns>
-        internal int Add(PlanktonVertex vertex)
+        internal int Add(PlanktonVertex<TVertex> vertex)
         {
             if (vertex == null) return -1;
             this._list.Add(vertex);
@@ -55,34 +55,10 @@ namespace Plankton
         /// </summary>
         /// <param name="vertex">Vertex to add.</param>
         /// <returns>The index of the newly added vertex.</returns>
-        internal int Add(PlanktonXYZ vertex)
-        {            
-            this._list.Add(new PlanktonVertex(vertex.X,vertex.Y,vertex.Z));
-            return this.Count - 1;
-        }
-        
-        /// <summary>
-        /// Adds a new vertex to the end of the Vertex list.
-        /// </summary>
-        /// <param name="x">X component of new vertex coordinate.</param>
-        /// <param name="y">Y component of new vertex coordinate.</param>
-        /// <param name="z">Z component of new vertex coordinate.</param>
-        /// <returns>The index of the newly added vertex.</returns>
-        public int Add(double x, double y, double z)
+        public (int Index, PlanktonVertex<TVertex> Vertex) NewVertex()
         {
-            return this.Add(new PlanktonVertex(x, y, z));
-        }
-        
-        /// <summary>
-        /// Adds a new vertex to the end of the Vertex list.
-        /// </summary>
-        /// <param name="x">X component of new vertex coordinate.</param>
-        /// <param name="y">Y component of new vertex coordinate.</param>
-        /// <param name="z">Z component of new vertex coordinate.</param>
-        /// <returns>The index of the newly added vertex.</returns>
-        public int Add(float x, float y, float z)
-        {
-            return this.Add(new PlanktonVertex(x, y, z));
+            var newVertex = new PlanktonVertex<TVertex>(_mesh.Identity.NewVertexIdentity);
+            return (Add(newVertex), newVertex);
         }
         #endregion
 
@@ -91,9 +67,11 @@ namespace Plankton
         /// </summary>
         /// <param name="vertices">A list, an array or any enumerable set of <see cref="PlanktonXYZ"/>.</param>
         /// <returns>Indices of the newly created vertices.</returns>
-        public int[] AddVertices(IEnumerable<PlanktonXYZ> vertices)
+        public (int Index, PlanktonVertex<TVertex> Vertex)[] CreateVertices(int n)
         {
-            return vertices.Select(v => this.Add(v)).ToArray();
+            var result = new (int Index, PlanktonVertex<TVertex> Vertex)[n];
+            for (int i = 0; i < n; i++) result[i] = NewVertex();
+            return result;
         }
         
         /// <summary>
@@ -104,7 +82,7 @@ namespace Plankton
         /// Must be larger than or equal to zero and smaller than the Vertex Count of the mesh.
         /// </param>
         /// <returns>The vertex at the given index.</returns>
-        public PlanktonVertex this[int index]
+        public PlanktonVertex<TVertex> this[int index]
         {
             get
             {
@@ -116,63 +94,6 @@ namespace Plankton
             }
         }
         
-        /// <summary>
-        /// <para>Sets or adds a vertex to the Vertex List.</para>
-        /// <para>If [index] is less than [Count], the existing vertex at [index] will be modified.</para>
-        /// <para>If [index] equals [Count], a new vertex is appended to the end of the vertex list.</para>
-        /// <para>If [index] is larger than [Count], the function will return false.</para>
-        /// </summary>
-        /// <param name="vertexIndex">Index of vertex to set.</param>
-        /// <param name="x">X component of vertex location.</param>
-        /// <param name="y">Y component of vertex location.</param>
-        /// <param name="z">Z component of vertex location.</param>
-        /// <returns><c>true</c> on success, <c>false</c> on failure.</returns>
-        public bool SetVertex(int vertexIndex, float x, float y, float z)
-        {
-            if (vertexIndex >= 0 && vertexIndex < _list.Count)
-            {
-                var v = this._list[vertexIndex];
-                v.X = x;
-                v.Y = y;
-                v.Z = z;
-            }
-            else if (vertexIndex == _list.Count)
-            {
-                this.Add(x, y, z);
-            }
-            else { return false; }
-            
-            return true;
-        }
-        
-        /// <summary>
-        /// <para>Sets or adds a vertex to the Vertex List.</para>
-        /// <para>If [index] is less than [Count], the existing vertex at [index] will be modified.</para>
-        /// <para>If [index] equals [Count], a new vertex is appended to the end of the vertex list.</para>
-        /// <para>If [index] is larger than [Count], the function will return false.</para>
-        /// </summary>
-        /// <param name="vertexIndex">Index of vertex to set.</param>
-        /// <param name="x">X component of vertex location.</param>
-        /// <param name="y">Y component of vertex location.</param>
-        /// <param name="z">Z component of vertex location.</param>
-        /// <returns><c>true</c> on success, <c>false</c> on failure.</returns>
-        public bool SetVertex(int vertexIndex, double x, double y, double z)
-        {
-            if (vertexIndex >= 0 && vertexIndex < _list.Count)
-            {
-                var v = this._list[vertexIndex];
-                v.X = (float)x;
-                v.Y = (float)y;
-                v.Z = (float)z;
-            }
-            else if (vertexIndex == _list.Count)
-            {
-                this.Add(x, y, z);
-            }
-            else { return false; }
-            
-            return true;
-        }
         #endregion
         
         /// <summary>
@@ -372,58 +293,6 @@ namespace Plankton
             return (h < -1 || _mesh.Halfedges[h].AdjacentFace == -1);
         }
 
-        /// <summary>
-        /// Gets the normal vector at a vertex.
-        /// </summary>
-        /// <param name="index">The index of a vertex.</param>
-        /// <returns>The area weighted vertex normal.</returns>
-        public PlanktonXYZ GetNormal(int index)
-        {
-            PlanktonXYZ vertex = this[index].ToXYZ();
-            PlanktonXYZ normal = new PlanktonXYZ();
-
-            var ring = this.GetVertexNeighbours(index);
-            int n = ring.Length;
-
-            for (int i = 0; i < n-1; i++)
-            {
-                normal += PlanktonXYZ.CrossProduct(
-                    this[ring[i]].ToXYZ() - vertex, 
-                    this[ring[i+1]].ToXYZ() - vertex);
-            }
-
-            if (this.IsBoundary(index) == false)
-            {
-                normal += PlanktonXYZ.CrossProduct(
-                    this[n-1].ToXYZ() - vertex,
-                    this[0].ToXYZ() - vertex);
-            }
-
-            return normal * (-1.0f / normal.Length); // return unit vector
-        }
-
-        /// <summary>
-        /// Gets the normal vectors for all vertices in the mesh.
-        /// </summary>
-        /// <returns>The area weighted vertex normals of all vertices in the mesh.</returns>
-        /// <remarks>
-        /// This will be accurate at the time of calling but will quickly
-        /// become outdated if you start fiddling with the mesh.
-        /// </remarks>
-        public PlanktonXYZ[] GetNormals()
-        {
-            return Enumerable.Range(0, this.Count).Select(i => this.GetNormal(i)).ToArray();
-        }
-
-        /// <summary>
-        /// Gets the positions of all vertices.
-        /// </summary>
-        /// <returns>The positions of all vertices in the mesh.</returns>
-        public PlanktonXYZ[] GetPositions()
-        {
-            return Enumerable.Range(0, this.Count).Select(i => this[i].ToXYZ()).ToArray();
-        }
-
         #region Euler operators
         /// <summary>
         /// <para>Merges two vertices by collapsing the pair of halfedges between them.</para>
@@ -455,7 +324,7 @@ namespace Plankton
             if (v_old != hs[second].StartVertex) { return -1; } // TODO: return ArgumentException instead?
 
             // Create a copy of the existing vertex (user can move it afterwards if needs be)
-            int v_new = this.Add(this[v_old].ToXYZ()); // copy vertex by converting to XYZ and back
+            int v_new = NewVertex().Index; // copy vertex by converting to XYZ and back
 
             // Go around outgoing halfedges, from 'second' to just before 'first'
             // Set start vertex to new vertex
@@ -533,7 +402,7 @@ namespace Plankton
             _mesh.Halfedges.RemovePairHelper(vertexHalfedges[0]);
             for (int i = 1; i < vertexHalfedges.Length; i++)
             {
-                _mesh.Faces[_mesh.Halfedges[vertexHalfedges[i]].AdjacentFace] = PlanktonFace.Unset;
+                _mesh.Faces[_mesh.Halfedges[vertexHalfedges[i]].AdjacentFace] = null;
                 _mesh.Halfedges.RemovePairHelper(vertexHalfedges[i]);
             }
 
@@ -544,7 +413,7 @@ namespace Plankton
             }
 
             // Mark center vertex for deletion
-            this[vertexIndex] = PlanktonVertex.Unset;
+            this[vertexIndex] = new PlanktonVertex<TVertex>(default);
 
             return _mesh.Faces[faceIndex].FirstHalfedge;
         }
@@ -582,7 +451,7 @@ namespace Plankton
         /// Gets an enumerator that yields all faces in this collection.
         /// </summary>
         /// <returns>An enumerator.</returns>
-        public IEnumerator<PlanktonVertex> GetEnumerator()
+        public IEnumerator<PlanktonVertex<TVertex>> GetEnumerator()
         {
             return this._list.GetEnumerator();
         }

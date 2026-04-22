@@ -10,19 +10,19 @@ namespace Plankton
     /// <summary>
     /// Provides access to the faces and <see cref="PlanktonFace"/> related functionality of a Mesh.
     /// </summary>
-    public class PlanktonFaceList : IEnumerable<PlanktonFace>
+    public class PlanktonFaceList<TVertex, TEdge, TFace> : IEnumerable<PlanktonFace<TFace>>
     {
-        private readonly PlanktonMesh _mesh;
-        private List<PlanktonFace> _list;
+        private readonly PlanktonMesh<TVertex, TEdge, TFace> _mesh;
+        private List<PlanktonFace<TFace>> _list;
         
         /// <summary>
         /// Initializes a new instance of the <see cref="PlanktonFaceList"/> class.
         /// Should be called from the mesh constructor.
         /// </summary>
         /// <param name="owner">The <see cref="PlanktonMesh"/> to which this list of half-edges belongs.</param>
-        internal PlanktonFaceList(PlanktonMesh owner)
+        internal PlanktonFaceList(PlanktonMesh<TVertex, TEdge, TFace> owner)
         {
-            this._list = new List<PlanktonFace>();
+            this._list = new List<PlanktonFace<TFace>>();
             this._mesh = owner;
         }
         
@@ -44,7 +44,7 @@ namespace Plankton
         /// </summary>
         /// <param name="halfEdge">Face to add.</param>
         /// <returns>The index of the newly added face.</returns>
-        internal int Add(PlanktonFace face)
+        public int Add(PlanktonFace<TFace> face)
         {
             if (face == null) return -1;
             this._list.Add(face);
@@ -234,7 +234,7 @@ namespace Plankton
             }
             
             // Finally, add the face and return its index
-            PlanktonFace f = new PlanktonFace() { FirstHalfedge = loop[0] };
+            var f = new PlanktonFace<TFace>(loop[0], _mesh.Identity.NewFaceIdentity);
             
             return this.Add(f);
         }
@@ -299,7 +299,7 @@ namespace Plankton
                   _mesh.Vertices[heObj.StartVertex].OutgoingHalfedge = h;
                 }
             }
-            this[index] = PlanktonFace.Unset;
+            this[index] = new PlanktonFace<TFace>(ident);
         }
         
         /// <summary>
@@ -310,7 +310,7 @@ namespace Plankton
         /// Must be larger than or equal to zero and smaller than the Face Count of the mesh.
         /// </param>
         /// <returns>The face at the given index.</returns>
-        public PlanktonFace this[int index]
+        public PlanktonFace<TFace> this[int index]
         {
             get
             {
@@ -440,7 +440,7 @@ namespace Plankton
 
             // add a new face
             //PlanktonFace new_face = new PlanktonFace();
-            int new_face_index = this.Add(PlanktonFace.Unset);
+            int new_face_index = this.Add(PlanktonFace<TFace>.Unset);
 
             //link everything up
 
@@ -526,7 +526,7 @@ namespace Plankton
         /// <returns>The index of the central vertex</returns>
         public int Stellate(int f)
         {
-            int central_vertex = _mesh.Vertices.Add(this.GetFaceCenter(f));
+            int central_vertex = _mesh.Vertices.Add(this.GetFaceCenter(f)); //TODO make generic
             int CountBefore = _mesh.Halfedges.Count();
             int[] FaceHalfEdges = this.GetHalfedges(f);
             for (int i = 0; i < FaceHalfEdges.Length; i++)
@@ -562,30 +562,6 @@ namespace Plankton
             return central_vertex;
         }
         #endregion
-
-        /// <summary>
-        /// Gets the barycenter of a face's vertices.
-        /// </summary>
-        /// <param name="f">A face index.</param>
-        /// <returns>The location of the specified face's barycenter.</returns>
-        public PlanktonXYZ GetFaceCenter(int f)
-        {
-            PlanktonXYZ centroid = PlanktonXYZ.Zero;
-            int count = 0;
-            foreach (int i in this.GetFaceVertices(f))
-            {
-                centroid += _mesh.Vertices[i].ToXYZ();
-                count++;
-            }
-            centroid *= 1f / count;
-            return centroid;
-        }
-        
-        [Obsolete("FaceCentroid is deprecated, please use GetFaceCenter instead.")]
-        public PlanktonXYZ FaceCentroid(int f)
-        {
-            return this.GetFaceCenter(f);
-        }
         
         /// <summary>
         /// Gets the number of naked edges which bound this face.

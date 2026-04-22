@@ -7,12 +7,13 @@ namespace Plankton
     /// <summary>
     /// This is the main class that describes a plankton mesh.
     /// </summary>
-    public class PlanktonMesh
+    public class PlanktonMesh<TVertex, TEdge, TFace>
     {
-        private PlanktonVertexList _vertices;
-        private PlanktonHalfEdgeList _halfedges;
-        private PlanktonFaceList _faces;
-        
+        private PlanktonVertexList<TVertex, TEdge, TFace> _vertices;
+        private PlanktonHalfEdgeList<TVertex, TEdge, TFace> _halfedges;
+        private PlanktonFaceList<TVertex, TEdge, TFace> _faces;
+        internal readonly IMeshIdentityProvider<TVertex, TEdge, TFace> Identity;
+
         #region "constructors"
         /// <summary>
         /// Initializes a new (empty) instance of the <see cref="PlanktonMesh"/> class.
@@ -24,15 +25,12 @@ namespace Plankton
         /// <summary>
         /// Initializes a new (duplicate) instance of the <see cref="PlanktonMesh"/> class.
         /// </summary>
-        public PlanktonMesh(PlanktonMesh source)
+        public PlanktonMesh(PlanktonMesh<TVertex, TEdge, TFace> source)
         {
             foreach (var v in source.Vertices)
             {
-                this.Vertices.Add(new PlanktonVertex() {
-                                      OutgoingHalfedge = v.OutgoingHalfedge,
-                                      X = v.X,
-                                      Y = v.Y,
-                                      Z = v.Z
+                this.Vertices.Add(new PlanktonVertex<TVertex>(v.Data) {
+                                      OutgoingHalfedge = v.OutgoingHalfedge
                                   });
             }
             foreach (var f in source.Faces)
@@ -55,9 +53,9 @@ namespace Plankton
         /// <summary>
         /// Gets access to the <see cref="PlanktonVertexList"/> collection in this mesh.
         /// </summary>
-        public PlanktonVertexList Vertices
+        public PlanktonVertexList<TVertex, TEdge, TFace> Vertices
         {
-            get { return _vertices ?? (_vertices = new PlanktonVertexList(this)); }
+            get { return _vertices ?? (_vertices = new PlanktonVertexList<TVertex, TEdge, TFace>(this)); }
         }
         
         /// <summary>
@@ -78,50 +76,6 @@ namespace Plankton
         #endregion
 
         #region "general methods"
-
-        /// <summary>
-        /// Calculate the volume of the mesh
-        /// </summary>
-        public double Volume()
-        {
-            double VolumeSum = 0;
-            for (int i = 0; i < this.Faces.Count; i++)
-            {
-                int[] FaceVerts = this.Faces.GetFaceVertices(i);
-                int EdgeCount = FaceVerts.Length;
-                if (EdgeCount == 3)
-                {
-                    PlanktonXYZ P = this.Vertices[FaceVerts[0]].ToXYZ();
-                    PlanktonXYZ Q = this.Vertices[FaceVerts[1]].ToXYZ();
-                    PlanktonXYZ R = this.Vertices[FaceVerts[2]].ToXYZ();
-                    //get the signed volume of the tetrahedron formed by the triangle and the origin
-                    VolumeSum += (1 / 6d) * (
-                           P.X * Q.Y * R.Z +
-                           P.Y * Q.Z * R.X +
-                           P.Z * Q.X * R.Y -
-                           P.X * Q.Z * R.Y -
-                           P.Y * Q.X * R.Z -
-                           P.Z * Q.Y * R.X);
-                }
-                else
-                {
-                    PlanktonXYZ P = this._faces.GetFaceCenter(i);
-                    for (int j = 0; j < EdgeCount; j++)
-                    {
-                        PlanktonXYZ Q = this.Vertices[FaceVerts[j]].ToXYZ();
-                        PlanktonXYZ R = this.Vertices[FaceVerts[(j + 1) % EdgeCount]].ToXYZ();
-                        VolumeSum += (1 / 6d) * (
-                            P.X * Q.Y * R.Z + 
-                            P.Y * Q.Z * R.X + 
-                            P.Z * Q.X * R.Y - 
-                            P.X * Q.Z * R.Y - 
-                            P.Y * Q.X * R.Z - 
-                            P.Z * Q.Y * R.X);
-                    }
-                }
-            }            
-            return VolumeSum;
-        }
 
         public PlanktonMesh Dual()
         {
